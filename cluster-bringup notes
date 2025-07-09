@@ -1,0 +1,57 @@
+
+
+Slurm is job scheduler 
+slurmctld → job control
+slurmdbd → accounting info (kisne kya kiya, kitna resource use hua)
+slurmd: Job runner
+sshd: Internal secure shell access
+DCGM exporter: GPU monitoring (agar GPU workload hai)
+shoreline agent: Health monitoring agent
+
+📦 4. Shared Storage (EFS / Lustre)
+📌 Kaam:
+* Worker nodes input/output files yahi se access karte hain.
+* Sabka common folder hai — jaise Google Drive jahan sab kuch store hota hai.
+
+📊 5. Monitoring (Grafana + CloudWatch)
+📌 Kaam:
+* Tere cluster ka health check karta hai:
+    * Kaunse node busy hai
+    * Kitna RAM/GPU use ho raha hai
+    * Job success/fail hui ya nahi
+Grafana Cloud me tu real-time graph dekh sakta hai.
+
+
+🔁 6. Shoreline Gateway (Monitoring Agent Communication)
+* Worker aur head node pe ek agent hota hai: shoreline agent
+* Ye continuously check karta hai:
+    * Koi node down to nahi?
+    * Kya alert bhejna chahiye?
+Ye ek watchman jaisa hai jo poori lab ka monitoring karta hai.
+
+
+Login node working 
+
+Login Node is the entry point of the cluster for end-users (like you).
+Iska kaam hai:
+🔑 SSH login allow karna
+🧾 Jobs submit karna (via sbatch, srun, squeue commands)
+❌ Job execution nahi karta, sirf pass karta hai Head Node ko.
+
+
+
+
+🔹 Placement Group kya hota hai P-Cluster mein?
+Soch le tu ek HPC (High Performance Computing) system bana raha hai jahan multiple EC2 instances (jaise compute nodes) mil ke kaam karte hain — jaise ek team project mein sab members milke kaam karte hain.
+Ab agar ye instances alag-alag jagah pe (data center racks) rakhe ho toh unke beech ka communication slow ho jaata hai.
+🧠 Placement Group ek AWS ka feature hai jisse tu instances ko ek hi jagah ya close proximity mein rakh sakta hai — taki:
+* Network latency kam ho
+* Bandwidth zyada ho
+* Data transfer fast ho
+* Parallel computing smooth ho
+🔸 Real Life Analogy:
+Soch:
+* Tu aur tere 4 doston ne ek group project banana hai.
+* Agar sab alag-alag cities mein ho, toh Zoom pe kaam karna slow hoga.
+* Agar sab ek hi room mein ho, toh sab kuch fast hoga: baat bhi, kaam bhi.
+👉 Yeh hi kaam placement group karta hai — sab instances ko ek hi "room" mein rakhta hai, matlab physically ek jaise rack/host pe deploy karta hai.
