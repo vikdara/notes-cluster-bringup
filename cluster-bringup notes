@@ -1,3 +1,41 @@
+📦 What is SLURM Exporter?
+
+SLURM Exporter ek tool hai jo SLURM job scheduler ka internal status and metrics ko collect karta hai aur Prometheus-compatible format me expose karta hai.
+Iska kaam hota hai:
+
+Kitne jobs running hai
+Kitne pending hai
+Kaunsa user kitna kaam kar raha hai
+Kitni nodes allocate hui hain
+Jobs kis state me hain (Running, Completed, Failed)
+Ye sab Prometheus ko deta hai, jisse tu Grafana dashboards me dekh sakta hai.
+
+🧠 Soch Real-Life Example:
+
+Tere cluster me 10 log jobs run kar rahe hain.
+
+Kaun kitni job daal raha hai?
+Kitni jobs queue me atki hui hain?               
+Kaunse users GPU wale node le rahe hain?
+Cluster me bottleneck to nahi?
+Ye sab data tere paas SLURM Exporter ke through aata hai — jisme tu proper graphs & alerts bana sakta hai.
+
+✅ IAM Policies kya hoti hain?
+IAM policies ek type ka JSON document hota hai jo define karta hai:
+
+Kaun (Who) kya (What) kar sakta hai, kis resource par (On what), aur kis condition ke sath (When/How).
+
+🔧 What is SSM in AWS?
+
+SSM = AWS Systems Manager
+Yeh ek management service hai jo aapko aapke AWS infrastructure (EC2, on-prem servers, etc.) ko remotely manage karne, automate karne aur secure rakhne me help karta hai — bina SSH ke.
+
+🎯 What are SSM Parameters?
+
+SSM Parameters = Key-Value pairs jo Systems Manager Parameter Store me store hote hain.
+
+💡 Hinglish me:
+SSM Parameters ek jagah hain jahan aap passwords, config values, database URLs, ya secret tokens securely store kar sakte ho — aur inhe EC2, Lambda ya kisi aur AWS service se access kar sakte ho.
 
 
 Slurm is job scheduler 
@@ -38,6 +76,136 @@ Iska kaam hai:
 🧾 Jobs submit karna (via sbatch, srun, squeue commands)
 ❌ Job execution nahi karta, sirf pass karta hai Head Node ko.
 
+Node Exporter ek lightweight tool hai jo Linux machine ke system-level metrics ko collect karta hai aur Prometheus ko send karta hai monitoring ke liye.
+Ye metrics jaise:
+
+CPU usage 🧠
+Memory usage 💾
+Disk space 📦
+Network usage 🌐
+Load average 🔄
+Filesystem info 📁
+⚠️ Node Exporter kuch run nahi karta, ye sirf machine ka health data collect karke Prometheus ko deta hai.
+
+head node 
+
+🔹 1. slurmctld (SLURM Controller Daemon)
+Most important process.
+Accepts jobs from login node (sbatch, srun, squeue).
+Finds available Worker Nodes.
+Schedules and distributes the job to the right nodes.
+🔁 It constantly talks to:
+
+slurmd on worker nodes (to start jobs)
+slurmdbd for tracking
+🧠 Think: Principal jo student groups ko batata hai ki kis team ko kya task karna hai.
+
+ 2. slurmdbd (SLURM Database Daemon)
+Yeh accounting ka kaam karta hai:
+Kis job ne kitna time liya?
+Kaunsa user ne submit kiya?
+Kitna CPU/GPU use hua?
+Connects with Aurora database (in AWS) to store historical data.
+📊 Helpful for:
+
+Billing
+Usage reports
+Debugging failed jobs
+
+
+🔹 3. clustermgtd (Cluster Management Daemon)
+AWS specific process.
+Manages EC2 nodes:
+Auto-scaling
+Spot/On-Demand instances ka lifecycle
+EC2 start/stop/terminate karna job load ke hisaab se
+🔧 DevOps Friendly: Helps in cost-saving by auto-starting/stopping worker nodes.
+
+🔹 4. Alloy & Shoreline Agent
+Alloy = Monitoring + Event orchestration
+Shoreline Agent = Health checking, incident detection, and alerting
+🛠️ Ye agents continuously check karte hain ki node healthy hai ya nahi, aur Prometheus/CloudWatch ko metrics bhejte hain.
+
+
+🔹 5. Shared Storage Mount (EFS/Lustre)
+Head node me bhi shared directory mounted hoti hai (/shared).
+Iss folder se:
+Jobs input data uthate hain
+Output wapas yahin save hota hai
+
+🔹 6. Networking (Internet Gateway, NAT)
+Head node ke paas public IP hota hai (usually).
+Monitoring agents ko outside world se baat karni hoti hai (Grafana Cloud, Shoreline Gateway), isliye Internet Gateway ka use hota hai.
+
+🔗 Connections: Head Node Talk Kisse Karta Hai?
+
+Connected To               	Purpose
+Login Node	                  Job accept karna via SLURM CLI tools
+Worker Nodes	               Jobs assign karna via slurmd
+Aurora DB	                  Usage/accounting data track karna
+EFS/Lustre 	                  Shared files/data access karna
+CloudWatch + Grafana	         Metrics bhejna
+Shoreline Gateway	            Health info bhejna / alert raise karna
+
+🧪 Real Workflow Example
+
+Step-by-Step:
+Tu Login Node pe job submit karta hai:
+sbatch train_model.sh
+Head Node ka slurmctld job accept karta hai:
+Checks: Kitne resources chahiye? (2 GPU nodes, 8 cores, 64 GB RAM)
+Assign karta hai 2 Worker Nodes
+Job run hoti hai Worker Nodes pe
+Worker nodes slurmd process use karke run karte hain
+Result save hota hai shared storage me
+Usage data send hota hai slurmdbd → Aurora DB
+Monitoring data send hota hai to:
+CloudWatch (→ Grafana)
+Shoreline Gateway (incident monitoring)
+🖥️ Head Node Pe Kya Run Hota Hai (Quick Table):
+
+Process	Role
+slurmctld	Job scheduling, resource assignment
+slurmdbd	Job accounting, usage history
+clustermgtd	EC2 node scaling, lifecycle mgmt
+shoreline agent	Monitoring & alerts
+alloy	Metrics + orchestration agent
+/shared mount	Shared input/output file storage
+Internet Gateway	For cloud communication
+
+
+🧠 Real-Life Analogy
+
+Login Node = Student who submits homework
+Head Node = Professor who reviews homework, assigns to team
+Worker Node = Group members who complete the homework
+/shared folder = Google Drive folder for all data
+slurmdbd = Class attendance sheet for marks and reports
+shoreline agent = Class camera for monitoring everything
+
+
+Feature	Description
+🧠 Central Brain	Manages all jobs in the cluster
+⚙️ SLURM Daemons	Job scheduling (slurmctld), accounting (slurmdbd)
+🌐 Networking	Public IP, internet gateway
+📦 Storage	Connected to /shared
+📊 Monitoring	Metrics sent to Grafana & Shoreline
+
+
+DGCM Exporter Datacenter GPU Manager Exporter
+
+Great! Tu ab DCGM Exporter ke baare mein poochh raha hai — ye GPU workloads ke monitoring ke liye important 
+hota hai, especially jab AWS ParallelCluster ya Kubernetes me NVIDIA GPU based nodes use kar rahe ho.
+Ye NVIDIA ka tool hai jo tere cluster ke GPU metrics ko Prometheus-compatible format me export karta hai.
+
+Yaani:
+
+GPU ka health
+Utilization
+Temperature
+Memory usage
+Power usage
+→ ye sab metrics Prometheus ko deta hai.
 
 
 
