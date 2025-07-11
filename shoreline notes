@@ -1,0 +1,3 @@
+shroline agent 
+Agent ek chhoti aur efficient background process hai jo aapke har monitored machine (jaise EC2, VM, etc.) pe chalta hai.
+Yeh background mein quietly kaam karta hai – bina user ko disturb kiye.
